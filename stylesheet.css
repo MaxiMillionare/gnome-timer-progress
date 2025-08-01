@@ -16,3 +16,36 @@
     padding: 10px;
     color: white;
 }
+
+.timer-container {
+    padding: 6px;
+    min-width: 100px;
+    max-width: 200px;
+}
+
+.timer-progress-container {
+    min-width: 60px;
+    height: 10px;
+    margin-right: 8px;
+}
+
+.timer-progress-background {
+    border: 1px solid white;
+    height: 9px;
+    /* border-radius: 10px; */
+    min-width: 60px;
+    background-color: transparent;
+}
+
+.timer-progress-fill {
+    border: 1px solid white;
+    height: 9px;
+    /* border-radius: 10px; */
+    background-color: white;
+}
+
+.timer-percentage-label {
+    /* font-weight: bold; */
+    color: white;
+    font-size: 0.9em;
+}

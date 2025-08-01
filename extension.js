@@ -195,17 +195,14 @@ class TimerMenu extends PopupMenu.PopupMenu {
     // Handles the countdown logic
     _updateCountdown() {
         let remainingTime = this._remainingTime;
-        let remainingReps = this._remainingReps;
-        let hours = Math.floor(remainingTime / 3600);
-        let minutes = Math.floor((remainingTime % 3600) / 60);
-        let seconds = remainingTime % 60;
-
-        this._updateTitleWithTime(hours, minutes, seconds);
+        let totalDuration = this._durationInSeconds;
 
         if (remainingTime <= 0) {
             this._handleTimerState();
         } else {
             this._remainingTime--;
+            let percentage = Math.min(100, Math.round(((totalDuration - remainingTime) / totalDuration) * 100));
+            this._button.updateProgress(percentage);
         }
     }
 
@@ -356,6 +353,9 @@ class TimerMenu extends PopupMenu.PopupMenu {
     startTimer() {
         let time = this._timerEntry.get_text().trim();
         if (time.length > 0) {
+            // Reset progress bar and percentage when starting a new timer
+            this._button.resetProgress();
+
             let updatedTimeString = this.parseTimer(time);
 
             if (this._durationInSeconds > 0) {
@@ -395,8 +395,8 @@ class TimerMenu extends PopupMenu.PopupMenu {
         this._remainingReps = 0;
         this._currentRep = 0;
         this._timerEntry.set_text('');
-        this._updateTitleWithString('Timer');
-    } 
+        this._button.resetProgress(); // Reset progress bar and percentage only when explicitly stopped
+    }
     
     stopTimerPlayAlarm() {
         this.stopTimer();
@@ -433,18 +433,80 @@ class TimerButton extends PanelMenu.Button {
     constructor(extensionPath) {
         super(0.0, _('Timer'));
 
-        this._label = new St.Label({
-            text: _('Timer'),
+        // Create a container for the progress bar and percentage
+        let container = new St.BoxLayout({
+            vertical: false,
+            x_expand: true,
             y_expand: true,
-            y_align: Clutter.ActorAlign.CENTER,
+            style_class: 'timer-container',
+            y_align: Clutter.ActorAlign.CENTER, // Ensure the container itself is vertically centered
         });
 
-        this.add_child(this._label);
+        // Create progress bar container
+        this._progressContainer = new St.Widget({
+            style_class: 'timer-progress-container',
+            x_expand: true,
+            y_align: Clutter.ActorAlign.CENTER, // Center the progress bar vertically
+        });
+
+        // Create the background bar (empty state)
+        this._progressBackground = new St.Widget({
+            style_class: 'timer-progress-background',
+            x_expand: true,
+        });
+
+        // Create the fill bar (progress state)
+        this._progressFill = new St.Widget({
+            style_class: 'timer-progress-fill',
+            width: 0,
+        });
+
+        // Add both bars to the container
+        this._progressContainer.add_child(this._progressBackground);
+        this._progressContainer.add_child(this._progressFill);
+
+        // Create the percentage label
+        this._percentageLabel = new St.Label({
+            text: '0%',
+            y_expand: true,
+            y_align: Clutter.ActorAlign.CENTER, // Center the label vertically
+            style_class: 'timer-percentage-label',
+        });
+
+        container.add_child(this._progressContainer);
+        container.add_child(this._percentageLabel);
+
+        this.add_child(container);
+
+        // Initialize the progress bar with 0% fill
+        this.resetProgress();
 
         this._menu = new TimerMenu(this, 1.0, St.Side.TOP, this, extensionPath);
         this.setMenu(this._menu);
     }
-    
+
+    updateProgress(percentage) {
+        console.log(`[TIMER EXTENSION] Updating progress to ${percentage}%`);
+        
+        // Calculate the fill width based on percentage
+        let containerWidth = this._progressBackground.get_width();
+        if (containerWidth > 0) {
+            let fillWidth = Math.round((containerWidth * percentage) / 100);
+            this._progressFill.set_width(fillWidth);
+        } else {
+            // Fallback: use fixed width calculation
+            let fillWidth = Math.round((60 * percentage) / 100); // 60px is min-width
+            this._progressFill.set_width(fillWidth);
+        }
+        
+        this._percentageLabel.text = `${percentage}%`;
+    }
+
+    resetProgress() {
+        this._progressFill.set_width(0);
+        this._percentageLabel.text = '0%';
+    }
+
     destroy() {
         if (this._menu) {
             this._menu.destroy();
